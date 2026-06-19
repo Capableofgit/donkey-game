@@ -230,7 +230,7 @@
 
   function build(){
     document.body.innerHTML =
-      '<nav class="tabs">'+tabLink('daily','DAILY','index.html')+tabLink('unlimited','UNLIMITED','unlimited.html')+tabLink('tower','TOWER','tower.html')+'</nav>'+
+      '<nav class="tabs">'+tabLink('daily','DAILY','index.html')+tabLink('unlimited','UNLIMITED','unlimited.html')+tabLink('tower','TOWER','tower.html')+tabLink('lobby','LOBBY','lobby.html')+'</nav>'+
       '<header><h1 class="title"><span class="emoji">🫏</span> Donkey Game</h1><div class="puzzle-no" id="subtitle"></div></header>'+
       '<div class="utility" id="utility"><button class="mute" id="muteBtn" type="button" aria-label="Toggle sound"></button></div>'+
       '<div class="panel">'+
