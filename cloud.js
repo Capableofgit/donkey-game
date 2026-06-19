@@ -129,21 +129,29 @@
   }
 
   // ---------- leaderboard (mode-aware) ----------
-  function renderLeaderboard(){
-    if(!lbEl) return;
+  var MEDAL=['🏆','🥈','🥉'], MEDALCLS=['gold','silver','bronze'];
+  function lbRows(){
     var m=METRIC[MODE], rows=[];
     for(var id in usersCache){ var u=usersCache[id]; if(!u || !u.name) continue;
       rows.push({ id:id, name:u.name, avatar:u.avatar, val:m.get(u.stats && u.stats[m.key]) }); }
     rows.sort(function(a,b){ return (b.val-a.val) || a.name.localeCompare(b.name); });
+    return rows;
+  }
+  function rankOf(id){ var r=lbRows(); for(var i=0;i<r.length;i++){ if(r[i].id===id) return i; } return -1; }
 
+  function renderLeaderboard(){
+    if(!lbEl) return;
+    var m=METRIC[MODE], rows=lbRows();
     var html='<h3 class="lb-title">🏆 Leaderboard <span>· '+m.label+' · '+modeTitle()+'</span></h3>';
     if(!rows.length){ html+='<div class="lb-empty">No players yet — be the first!</div>'; }
     else {
       html+='<div class="lb-list">';
       rows.forEach(function(r,i){
+        var medal = i<3 ? MEDAL[i]+' ' : '';
+        var glow  = i<3 ? ' '+MEDALCLS[i] : '';
         html+='<div class="lb-row'+(r.id===uid?' me':'')+'" data-uid="'+r.id+'">'+
           '<span class="lb-rank">'+(i+1)+'</span>'+ avatarHTML(r,26) +
-          '<span class="lb-name">'+esc(r.name)+'</span>'+
+          '<span class="lb-name'+glow+'">'+medal+esc(r.name)+'</span>'+
           '<span class="lb-val">'+r.val+'</span></div>';
       });
       html+='</div>';
@@ -158,9 +166,10 @@
   function openProfile(id){
     var u = usersCache[id] || (id===uid ? meData : null); if(!u) return;
     var s=u.stats||{}, d=s.daily||{}, un=s.unlimited||{}, tw=s.tower||{}, isMe=(id===uid);
+    var rank=rankOf(id), medal=(rank>=0&&rank<3)?MEDAL[rank]+' ':'', glowCls=(rank>=0&&rank<3)?' '+MEDALCLS[rank]:'';
     var html='<button class="modal-x" id="modalX" aria-label="Close">✕</button>'+
       '<div class="prof-head">'+ avatarHTML(u,84,'prof-av') +
-        '<div class="prof-name">'+esc(u.name||'Player')+(isMe?' <span class="you">(you)</span>':'')+'</div></div>'+
+        '<div class="prof-name'+glowCls+'">'+medal+esc(u.name||'Player')+(isMe?' <span class="you">(you)</span>':'')+'</div></div>'+
       (isMe ? '<div class="prof-actions"><label class="btn sm">Change photo<input type="file" id="avFile" accept="image/*" hidden></label><button class="btn sm" id="editName">Edit name</button></div>' : '')+
       '<div class="prof-stats">'+
         statBlock('Daily',[['Max streak',d.maxStreak||0],['Current streak',d.curStreak||0],['Wins',d.wins||0],['Played',d.games||0]])+

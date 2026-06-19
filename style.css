@@ -225,3 +225,10 @@ img.av{ object-fit:cover; }
 .plate.red{ border-color:var(--bomb-line); background:rgba(208,70,70,.16); }
 .plate.red .ptag{ color:var(--bomb-line); }
 .plate.green{ border-color:var(--safe-line); background:rgba(106,170,100,.30); }
+
+/* ---------- Medals (top-3 leaderboard / profile) + rotating footer line ---------- */
+.gold{   color:#ffd955; text-shadow:0 0 5px rgba(255,205,60,.95), 0 0 12px rgba(255,190,40,.6); }
+.silver{ color:#e6edf5; text-shadow:0 0 5px rgba(222,232,246,.95), 0 0 12px rgba(190,205,225,.55); }
+.bronze{ color:#f0a86a; text-shadow:0 0 5px rgba(228,150,82,.95), 0 0 12px rgba(205,120,55,.55); }
+.lb-name.gold, .lb-name.silver, .lb-name.bronze{ overflow:visible; }
+.footer-sub{ margin-top:6px; font-size:.68rem; color:#6a6e76; line-height:1.4; max-width:340px; margin-left:auto; margin-right:auto; }
