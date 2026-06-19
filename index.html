@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Donkey Game</title>
+<link rel="icon" href="RightSideUpDonkey.png" />
+<style>
+  :root{
+    --bg:#121213;
+    --ink:#f7f7f8;
+    --muted:#9197a0;
+    --line:#3a3a3c;
+    --cover:#2a2a2e;
+    --cover-hi:#35353b;
+    --card:#1c1c1f;
+    --num:#8a8d95;
+    --safe-bg:#3f7344;   --safe-line:#6aaa64;
+    --bomb-bg:#9b383d;   --bomb-line:#e0606a;
+    --avoid-bg:#3a5a8c;  --avoid-line:#6aa0e0;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px rgba(0,0,0,.5);
+    --radius:14px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100%;
+    padding:22px 16px 56px;
+  }
+  header{ text-align:center; width:100%; max-width:480px; }
+  .title{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    font-size:2rem; font-weight:800; letter-spacing:.5px; margin:0;
+  }
+  .title .emoji{ font-size:1.7rem; }
+  .puzzle-no{ color:var(--muted); font-size:.85rem; margin-top:4px; letter-spacing:.3px; }
+
+  .panel{ width:100%; max-width:480px; margin-top:16px; }
+
+  .status{
+    text-align:center; margin:20px 0 12px; min-height:24px;
+  }
+  .found{ font-size:.95rem; color:var(--muted); font-weight:600; }
+  .found b{ color:var(--ink); }
+
+  .grid{
+    width:100%; max-width:480px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    margin:0 auto;
+  }
+  .tile{
+    position:relative; aspect-ratio:1/1; border:0; padding:0; background:transparent;
+    cursor:pointer; perspective:700px; -webkit-tap-highlight-color:transparent;
+  }
+  .tile:disabled{ cursor:default; }
+  .tile .inner{
+    position:relative; width:100%; height:100%;
+    transform-style:preserve-3d; transition:transform .5s cubic-bezier(.2,.7,.2,1);
+  }
+  .tile.flipped .inner{ transform:rotateY(180deg); }
+  .face{
+    position:absolute; inset:0; border-radius:var(--radius);
+    display:flex; align-items:center; justify-content:center;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    overflow:hidden;
+  }
+  .front{
+    background:var(--cover); border:2px solid var(--line);
+    font-size:1.9rem; font-weight:800; color:var(--num);
+    transition:background .15s, transform .15s;
+  }
+  .tile:not(:disabled):hover .front{ background:var(--cover-hi); }
+  .tile:not(:disabled):active .front{ transform:scale(.97); }
+  .front .tap{ position:absolute; bottom:7px; left:0; right:0; text-align:center; font-size:.6rem; font-weight:700; letter-spacing:.5px; color:#5e6066; text-transform:uppercase; }
+  .back{
+    transform:rotateY(180deg);
+    background:var(--card); border:2px solid var(--line); padding:9px;
+  }
+  .back img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .back.safe{ background:var(--safe-bg); border-color:var(--safe-line); }
+  .back.bomb{ background:var(--bomb-bg); border-color:var(--bomb-line); }
+  .back.avoid{ background:var(--avoid-bg); border-color:var(--avoid-line); }
+  .back.avoid img{ filter:grayscale(.35) opacity(.92); }
+  .badge-num{
+    position:absolute; top:6px; left:8px; z-index:3;
+    font-size:.72rem; font-weight:800; color:rgba(255,255,255,.7);
+    text-shadow:0 1px 2px rgba(0,0,0,.55); pointer-events:none;
+    opacity:0; transition:opacity .15s ease;
+  }
+  /* Only show the corner number once the block has flipped past its midpoint,
+     so it never appears at the same time as the big middle number. */
+  .tile.flipped .badge-num{ opacity:1; transition-delay:.28s; }
+  .tag{
+    position:absolute; bottom:6px; left:0; right:0; z-index:3; text-align:center;
+    font-size:.6rem; font-weight:800; letter-spacing:.4px; text-transform:uppercase;
+    text-shadow:0 1px 2px rgba(0,0,0,.55); pointer-events:none;
+  }
+  .tag.bomb{ color:#ffd5d5; }
+  .tag.avoid{ color:#d5e4ff; }
+
+  .result{
+    width:100%; max-width:480px; margin:18px auto 0;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px 18px 16px; text-align:center;
+    display:none;
+  }
+  .result.show{ display:block; animation:rise .35s ease; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
+  .result h2{ margin:0 0 6px; font-size:1.35rem; line-height:1.25; }
+  .result.win h2{ color:#7ec877; }
+  .result.lose h2{ color:#e7727b; }
+  .result p{ margin:0 0 4px; color:#c7c9ce; font-size:.95rem; line-height:1.45; }
+  .countdown{ margin-top:14px; font-size:.82rem; color:var(--muted); }
+  .countdown b{ color:var(--ink); font-variant-numeric:tabular-nums; }
+
+  footer{ margin-top:26px; color:var(--muted); font-size:.78rem; text-align:center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1 class="title"><span class="emoji">🫏</span> Donkey Game</h1>
+    <div class="puzzle-no" id="puzzleNo"></div>
+  </header>
+
+  <div class="panel">
+    <div class="status" id="status"></div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="result" id="result">
+      <h2 id="resultTitle"></h2>
+      <p id="resultText"></p>
+      <div class="countdown">Next board in <b id="countdown">--:--:--</b></div>
+    </div>
+  </div>
+
+  <footer>Vibecoded by Leo</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Daily puzzle (deterministic, identical on every device) ----------
+  // The board swaps at midnight in Israel (Asia/Jerusalem, DST handled automatically).
+  var DAY_MS = 86400000;
+  var EPOCH = Date.UTC(2026, 5, 19);           // Board No. 0 = 19 Jun 2026 (Israel date)
+  var TILES = 9;
+  var SAFE = TILES - 1;                         // 8 donkeys to find
+
+  // Current date/time in Israel, as plain numbers (handles +2/+3 DST via the tz database).
+  function israelParts(){
+    var dtf = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jerusalem', hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    var p = {};
+    dtf.formatToParts(new Date()).forEach(function(x){
+      if(x.type !== 'literal') p[x.type] = parseInt(x.value, 10);
+    });
+    if(p.hour === 24) p.hour = 0;              // some engines report 24 at midnight
+    return p;
+  }
+
+  function currentPuzzleNumber(){
+    var qp = new URLSearchParams(location.search);
+    if(qp.has('day')){
+      var d = parseInt(qp.get('day'), 10);
+      if(isFinite(d)) return d;
+    }
+    var p = israelParts();
+    var today = Date.UTC(p.year, p.month - 1, p.day);
+    return Math.round((today - EPOCH) / DAY_MS);   // today = No. 0, then 1, 2, ...
+  }
+
+  // Hash a string -> 32-bit seed (xmur3), then a seeded PRNG (mulberry32).
+  // Pure integer math => identical output in every browser, forever.
+  function xmur3(str){
+    var h = 1779033703 ^ str.length;
+    for(var i=0;i<str.length;i++){
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function(){
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      h ^= h >>> 16;
+      return h >>> 0;
+    };
+  }
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function bombIndexFor(puzzle){
+    var seed = xmur3('donkey-game::v1::' + puzzle)();
+    var rng = mulberry32(seed);
+    return Math.floor(rng() * TILES);
+  }
+
+  // ---------- State (fresh on every load — no persistence) ----------
+  var PUZZLE = currentPuzzleNumber();
+  var BOMB = bombIndexFor(PUZZLE);
+
+  var state = {
+    revealed: new Array(TILES).fill(false),
+    found: 0,
+    over: false,
+    result: null        // 'win' | 'lose'
+  };
+
+  // ---------- DOM ----------
+  var grid = document.getElementById('grid');
+  var statusEl = document.getElementById('status');
+  var resultEl = document.getElementById('result');
+  var resultTitle = document.getElementById('resultTitle');
+  var resultText = document.getElementById('resultText');
+  var countdownEl = document.getElementById('countdown');
+
+  document.getElementById('puzzleNo').textContent =
+    'No. ' + PUZZLE + ' · a new board every day';
+
+  // Build the 9 tiles once, then only toggle classes/content (keeps flip animation smooth).
+  var tiles = [];
+  for(var i=0;i<TILES;i++){
+    var btn = document.createElement('button');
+    btn.className = 'tile';
+    btn.setAttribute('aria-label', 'Block ' + (i+1));
+    btn.dataset.i = i;
+    btn.innerHTML =
+      '<span class="badge-num">' + (i+1) + '</span>' +
+      '<span class="tag"></span>' +
+      '<div class="inner">' +
+        '<div class="face front">' + (i+1) + '<span class="tap">reveal</span></div>' +
+        '<div class="face back"><img alt="" /></div>' +
+      '</div>';
+    (function(idx){ btn.addEventListener('click', function(){ onTileClick(idx); }); })(i);
+    grid.appendChild(btn);
+    tiles.push(btn);
+  }
+
+  // ---------- Sound effects (Web Audio — soft, generated, no files) ----------
+  var AudioFX = (function(){
+    var ctx;
+    function ac(){
+      if(ctx === undefined){
+        try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e){ ctx = null; }
+      }
+      if(ctx && ctx.state === 'suspended'){ ctx.resume(); }
+      return ctx;
+    }
+    function tone(freq, delay, dur, type, peak){
+      var c = ac(); if(!c) return;
+      var t0 = c.currentTime + delay;
+      var osc = c.createOscillator(), g = c.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peak, t0 + 0.02);    // soft attack
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);   // gentle decay
+      osc.connect(g); g.connect(c.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.03);
+    }
+    // C-major scale: pitch climbs one step per donkey, reaching the octave on the 8th.
+    var SCALE = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+    return {
+      reveal: function(n){                 // n = donkeys found so far (1..8)
+        var i = Math.max(1, Math.min(8, n)) - 1;
+        tone(SCALE[i], 0, 0.30, 'sine', 0.12);
+        if(n >= 8){ tone(SCALE[i] * 2, 0.04, 0.55, 'sine', 0.05); }  // soft win shimmer
+      },
+      fail: function(){                    // soft descending tone for the upside-down donkey
+        var c = ac(); if(!c) return;
+        var t0 = c.currentTime;
+        var osc = c.createOscillator(), g = c.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(311.13, t0);                  // Eb4
+        osc.frequency.exponentialRampToValueAtTime(110, t0 + 0.5); // glide down
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+        osc.connect(g); g.connect(c.destination);
+        osc.start(t0); osc.stop(t0 + 0.62);
+      }
+    };
+  })();
+
+  function onTileClick(i){
+    if(state.over || state.revealed[i]) return;
+    state.revealed[i] = true;
+
+    if(i === BOMB){
+      state.over = true;
+      state.result = 'lose';
+      AudioFX.fail();
+    }else{
+      state.found++;
+      AudioFX.reveal(state.found);
+      if(state.found >= SAFE){
+        state.over = true;
+        state.result = 'win';
+        state.revealed[BOMB] = true;         // reveal where it was hiding (avoided)
+      }
+    }
+    render();
+    if(state.result === 'win') launchConfetti();
+  }
+
+  function render(){
+    for(var i=0;i<TILES;i++){
+      var btn = tiles[i];
+      var back = btn.querySelector('.back');
+      var img = back.querySelector('img');
+      var tag = btn.querySelector('.tag');
+      if(state.revealed[i]){
+        btn.classList.add('flipped');
+        btn.disabled = true;
+        back.classList.remove('safe','bomb','avoid');
+        tag.className = 'tag';
+        tag.textContent = '';
+        if(i === BOMB){
+          img.src = 'UpsideDownDonkey.png';
+          if(state.result === 'win'){
+            back.classList.add('avoid');
+            img.alt = 'Upside-down donkey (avoided)';
+            tag.classList.add('avoid'); tag.textContent = 'avoided';
+          }else{
+            back.classList.add('bomb');
+            img.alt = 'Upside-down donkey';
+            tag.classList.add('bomb'); tag.textContent = 'you lose';
+          }
+        }else{
+          back.classList.add('safe');
+          img.src = 'RightSideUpDonkey.png';
+          img.alt = 'Right-side-up donkey';
+        }
+      }else{
+        btn.classList.remove('flipped');
+        btn.disabled = state.over;
+      }
+    }
+
+    statusEl.innerHTML = '<div class="found">Donkeys found: <b>' + state.found + '</b> / ' + SAFE + '</div>';
+
+    if(state.over) showResult();
+    else resultEl.classList.remove('show');
+  }
+
+  function showResult(){
+    resultEl.classList.add('show');
+    resultEl.classList.remove('win','lose');
+    if(state.result === 'win'){
+      resultEl.classList.add('win');
+      resultTitle.textContent = '🎉 WINNER WINNER CHICKEN HOVAV!';
+      resultText.textContent = "Congratulations, you're going to have a good week ahead of you.";
+    }else{
+      resultEl.classList.add('lose');
+      resultTitle.textContent = '💥 Upside-down donkey!';
+      resultText.textContent = 'You lost. Get out.';
+    }
+  }
+
+  // ---------- Countdown to next Israel midnight (and auto-refresh on rollover) ----------
+  function tick(){
+    if(currentPuzzleNumber() !== PUZZLE && !new URLSearchParams(location.search).has('day')){
+      location.reload(); return;
+    }
+    var p = israelParts();
+    var rem = 86400 - (p.hour*3600 + p.minute*60 + p.second);
+    if(rem < 0) rem = 0;
+    var h = Math.floor(rem/3600), m = Math.floor((rem%3600)/60), s = rem%60;
+    var pad = function(x){ return (x<10?'0':'') + x; };
+    countdownEl.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+  }
+  setInterval(tick, 1000); tick();
+
+  // ---------- Confetti rain (on win) ----------
+  function launchConfetti(){
+    if(document.getElementById('confetti-canvas')) return;     // already raining
+    var canvas = document.createElement('canvas');
+    canvas.id = 'confetti-canvas';
+    canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W, H;
+    function resize(){ W = canvas.width = Math.floor(innerWidth * dpr); H = canvas.height = Math.floor(innerHeight * dpr); }
+    resize();
+    window.addEventListener('resize', resize);
+
+    var colors = ['#6aaa64','#e0606a','#6aa0e0','#f2c14e','#f29ec4','#9b7ede','#ffffff'];
+    var pieces = [];
+    function rand(a,b){ return a + Math.random()*(b-a); }
+    function addPiece(){
+      pieces.push({
+        x: rand(0, W), y: rand(-H*0.25, H),   // spread across the WHOLE height: no empty gap
+        w: rand(6,12)*dpr, h: rand(8,16)*dpr,
+        color: colors[(Math.random()*colors.length)|0],
+        vy: rand(2,5)*dpr, vx: rand(-1,1)*dpr,
+        angle: rand(0, Math.PI*2), spin: rand(-0.2,0.2),
+        sway: rand(0.5,1.5), phase: rand(0, Math.PI*2)
+      });
+    }
+
+    var TARGET = 280, DURATION = 5000, t0 = performance.now();   // denser now that it covers the full height
+    function frame(now){
+      var elapsed = now - t0;
+      ctx.clearRect(0,0,W,H);
+      if(elapsed < DURATION){ while(pieces.length < TARGET) addPiece(); }   // keep raining
+      for(var i = pieces.length-1; i >= 0; i--){
+        var p = pieces[i];
+        p.y += p.vy;
+        p.x += p.vx + Math.sin(now/600 + p.phase) * p.sway * dpr;
+        p.angle += p.spin;
+        if(p.y > H + 20*dpr){
+          if(elapsed < DURATION){ p.y = rand(-H*0.25, 0); p.x = rand(0, W); }  // recycle to top
+          else { pieces.splice(i,1); continue; }                              // let it run out
+        }
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+      }
+      if(pieces.length > 0){ requestAnimationFrame(frame); }
+      else { window.removeEventListener('resize', resize); canvas.remove(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Go ----------
+  render();
+})();
+</script>
+</body>
+</html>
