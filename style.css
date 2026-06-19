@@ -209,10 +209,10 @@ img.av{ object-fit:cover; }
 .roombar{ display:flex; align-items:center; justify-content:center; gap:10px; margin:8px 0 14px; flex-wrap:wrap; }
 .roomcode{ font-weight:800; letter-spacing:2px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 14px; font-size:.95rem; }
 
-.lobby{ display:flex; gap:18px; width:100%; max-width:740px; margin:6px auto 0; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
-.lobby-main{ flex:1 1 340px; max-width:480px; min-width:0; }
-.lobby-side{ flex:0 0 210px; }
-@media (max-width:680px){ .lobby-side{ flex-basis:100%; order:-1; } }
+.lobby{ width:100%; }
+.lobby-main{ width:100%; max-width:480px; margin:6px auto 0; }
+.lobby-side{ width:100%; max-width:480px; margin:22px auto 0; }
+@media (min-width:940px){ .lobby-side{ position:fixed; right:20px; top:50%; transform:translateY(-50%); width:200px; max-width:200px; margin:0; } }
 .lobby-status{ text-align:center; color:var(--muted); font-weight:700; margin:8px 0 14px; min-height:20px; }
 .lobby-status b{ color:var(--ink); }
 

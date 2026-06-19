@@ -82,9 +82,9 @@
     if(MODE==='unlimited'){
       return { n:9, cols:3, safeTotal:8, bombs:oneBomb(Math.random,9) };
     }
-    // tower
-    var P=puzzleNumber(), L=towerLevel, cols=L+2, n=cols*cols;
-    return { n:n, cols:cols, level:L, safeTotal:n-L, bombs:pickBombs(n,L,mulberry32(xmur3('donkey-tower::v1::'+P+'::L'+L)())) };
+    // tower — random board each load (reshuffles on every refresh, like Unlimited)
+    var L=towerLevel, cols=L+2, n=cols*cols;
+    return { n:n, cols:cols, level:L, safeTotal:n-L, bombs:pickBombs(n,L,Math.random) };
   }
 
   function buildBoard(spec){
@@ -138,12 +138,17 @@
     if(st.over){ oddsEl.style.display='none'; return; }
     var hidden=0; for(var i=0;i<board.n;i++) if(!st.revealed[i]) hidden++;
     var pct = hidden>0 ? Math.round(100*(board.safeTotal-st.found)/hidden) : 0;
+    var t = Math.pow(pct/100, 2.2);                       // bias the colour toward red faster
     oddsEl.style.display='block';
-    oddsEl.style.color=oddsColor(pct);
+    oddsEl.style.backgroundImage='linear-gradient(90deg,'+oddsColor(Math.min(1,t+0.18))+','+oddsColor(Math.max(0,t-0.18))+')';
+    oddsEl.style.webkitBackgroundClip='text'; oddsEl.style.backgroundClip='text'; oddsEl.style.color='transparent';
     oddsEl.innerHTML='Next reveal: <b>'+pct+'% safe</b>';
   }
-  function oddsColor(pct){ var t=pct/100;
-    return 'rgb('+Math.round(224+(106-224)*t)+','+Math.round(96+(170-96)*t)+','+Math.round(106+(100-106)*t)+')'; }
+  function oddsColor(t){                                   // t in [0,1] (1 = safe): red -> amber -> green
+    var red=[226,80,80], amber=[232,170,60], green=[106,190,100], a, b, f;
+    if(t<0.5){ a=red; b=amber; f=t/0.5; } else { a=amber; b=green; f=(t-0.5)/0.5; }
+    return 'rgb('+Math.round(a[0]+(b[0]-a[0])*f)+','+Math.round(a[1]+(b[1]-a[1])*f)+','+Math.round(a[2]+(b[2]-a[2])*f)+')';
+  }
 
   function boardOver(){
     for(var i=0;i<board.n;i++){ if(board.bombs[i]) st.revealed[i]=true; }   // reveal all bombs for clarity
@@ -247,7 +252,7 @@
 
     if(MODE==='daily'){ dailyPuzzleAtLoad=puzzleNumber(); subtitleEl.textContent='No. '+dailyPuzzleAtLoad+' · a new board every day'; setInterval(dailyTick,1000); dailyTick(); }
     else if(MODE==='unlimited'){ subtitleEl.textContent='Unlimited · new board every refresh'; }
-    else { subtitleEl.textContent='Tower · No. '+puzzleNumber()+' · climb as high as you can'; }
+    else { subtitleEl.textContent='Tower · climb as high as you can'; }
 
     updateMuteBtn();
     document.getElementById('muteBtn').addEventListener('click',function(){ muted=!muted; lsSet('donkey:muted',muted); updateMuteBtn(); });

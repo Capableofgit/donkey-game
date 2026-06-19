@@ -84,7 +84,7 @@
   // ---------- create a room ----------
   function showCreate(){
     app.innerHTML='<div class="create-card"><h2 style="margin:0 0 6px">Start a lobby</h2>'+
-      '<p>Create a room, then share the invite link. Everyone plays the same board, live — take turns and watch the nameplates.</p>'+
+      '<p>Create a room, then share the invite link. Everyone plays the same board, live.</p>'+
       '<button class="btn" id="mk">➕ Create a lobby</button></div>';
     document.getElementById('mk').addEventListener('click',function(){
       var id=newCode();
