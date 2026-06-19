@@ -152,7 +152,10 @@
     else singleOver();
   }
 
+  function recordCloud(p){ if(window.DGCloud && window.DGCloud.recordResult){ try{ window.DGCloud.recordResult(p); }catch(e){} } }
+
   function singleOver(){
+    recordCloud({ mode:MODE, won:(st.result==='win'), day:(MODE==='daily'?puzzleNumber():null) });
     if(st.result==='win'){ panel('win','🎉 WINNER WINNER CHICKEN HOVAV!',"Congratulations, you're going to have a good week ahead of you.", extraForMode()); launchConfetti(); }
     else panel('lose','💥 Upside-down donkey!','You lost. Get out.', extraForMode());
     wireExtra();
@@ -160,9 +163,11 @@
 
   function towerOver(){
     if(st.result==='lose'){
+      recordCloud({ mode:'tower', won:false, level:board.level, champion:false });
       panel('lose','💥 Upside-down donkey!','You reached level '+board.level+' of '+TOWER_MAX+'. Get out.','<button class="btn" id="towerBtn">↻ Try again</button>');
       document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=1; buildBoard(makeSpec()); });
     } else if(board.level>=TOWER_MAX){
+      recordCloud({ mode:'tower', won:true, level:TOWER_MAX, champion:true });
       panel('win','🏆 TOWER CHAMPION!','You cleared all '+TOWER_MAX+' levels. Incredible.','<button class="btn" id="towerBtn">↻ Play again</button>');
       launchConfetti();
       document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=1; buildBoard(makeSpec()); });
@@ -226,8 +231,8 @@
   function build(){
     document.body.innerHTML =
       '<nav class="tabs">'+tabLink('daily','DAILY','index.html')+tabLink('unlimited','UNLIMITED','unlimited.html')+tabLink('tower','TOWER','tower.html')+'</nav>'+
-      '<button class="mute" id="muteBtn" type="button" aria-label="Toggle sound"></button>'+
       '<header><h1 class="title"><span class="emoji">🫏</span> Donkey Game</h1><div class="puzzle-no" id="subtitle"></div></header>'+
+      '<div class="utility" id="utility"><button class="mute" id="muteBtn" type="button" aria-label="Toggle sound"></button></div>'+
       '<div class="panel">'+
         '<div class="status" id="status"></div>'+
         '<div class="grid" id="grid"></div>'+
