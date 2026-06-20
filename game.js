@@ -87,6 +87,9 @@
     return { n:n, cols:cols, level:L, safeTotal:n-L, bombs:pickBombs(n,L,Math.random) };
   }
 
+  var HEBREW = ['שמאלה למעלה','למעלה באמצע','ימינה למעלה','שמאלה באמצע','באמצע באמצע','ימינה באמצע','שמאלה למטה','למטה באמצע','הטמל הנימי'];
+  function frontLabel(i,cols){ return cols===3 ? '<span class="lbl heb" dir="auto">'+HEBREW[i]+'</span>' : '<span class="lbl">'+(i+1)+'</span>'; }
+
   function buildBoard(spec){
     board=spec; st={ revealed:new Array(spec.n).fill(false), found:0, over:false, result:null, hitBomb:-1 };
     grid.dataset.cols=spec.cols; grid.style.setProperty('--cols',spec.cols);
@@ -94,7 +97,7 @@
     for(var i=0;i<spec.n;i++){
       var btn=document.createElement('button'); btn.className='tile'; btn.setAttribute('aria-label','Block '+(i+1));
       btn.innerHTML='<span class="badge-num">'+(i+1)+'</span><span class="tag"></span>'+
-        '<div class="inner"><div class="face front">'+(i+1)+'<span class="tap">reveal</span></div>'+
+        '<div class="inner"><div class="face front">'+frontLabel(i,spec.cols)+'<span class="tap">reveal</span></div>'+
         '<div class="face back"><img alt=""></div></div>';
       (function(idx){ btn.addEventListener('click',function(){ onClick(idx); }); })(i);
       grid.appendChild(btn); tiles.push(btn);

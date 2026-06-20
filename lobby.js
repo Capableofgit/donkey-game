@@ -28,6 +28,7 @@
     var i=(p && p.name ? p.name.charAt(0) : '?').toUpperCase();
     return '<span class="av" style="'+st+'font-size:'+Math.round(size*0.5)+'px;">'+esc(i)+'</span>'; }
   function tab(mode,label,href){ return '<a class="tab'+(mode==='lobby'?' active':'')+'" href="'+href+'">'+label+'</a>'; }
+  var HEBREW = ['שמאלה למעלה','למעלה באמצע','ימינה למעלה','שמאלה באמצע','באמצע באמצע','ימינה באמצע','שמאלה למטה','למטה באמצע','הטמל הנימי'];
 
   // ---------- state ----------
   var auth, db, uid=null, myName=null, myAvatar=null;
@@ -112,7 +113,7 @@
     if(g.count>prevCount && g.lastMove && g.lastMove.tile!==g.bomb){
       flashUid=g.lastMove.by;
       clearTimeout(flashTimer);
-      flashTimer=setTimeout(function(){ flashUid=null; if(room) render(compute()); }, 900);
+      flashTimer=setTimeout(function(){ flashUid=null; if(room) render(compute()); }, 1000);
     }
     prevCount=g.count;
     render(g);
@@ -197,7 +198,7 @@
            '<div class="face back '+(isBomb?'bomb':'safe')+'"><img src="'+(isBomb?'UpsideDownDonkey.png':'RightSideUpDonkey.png')+'" alt=""></div></div></div>';
       } else {
         var dis=(g.over || !myTurn) ? ' disabled' : '';
-        h+='<button class="tile" data-i="'+i+'"'+dis+'><div class="inner"><div class="face front">'+(i+1)+(g.over||!myTurn?'':'<span class="tap">reveal</span>')+'</div><div class="face back"></div></div></button>';
+        h+='<button class="tile" data-i="'+i+'"'+dis+'><div class="inner"><div class="face front"><span class="lbl heb" dir="auto">'+HEBREW[i]+'</span>'+(g.over||!myTurn?'':'<span class="tap">reveal</span>')+'</div><div class="face back"></div></div></button>';
       }
     }
     return h+'</div>';
