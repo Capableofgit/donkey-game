@@ -6,12 +6,15 @@
   "use strict";
 
   var BANNED = ['tomishere'];                                  // normalized form: lowercase, letters/digits only
+  var dbBans = {};                                             // admin-set bans from the database (normalized name -> truthy)
 
   function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,''); }
   function isBanned(name){
     var n = norm(name); if(!n) return false;
-    return BANNED.some(function(b){ return n.indexOf(b) !== -1; });
+    if(BANNED.some(function(b){ return n.indexOf(b) !== -1; })) return true;   // hard-coded (substring match)
+    return !!dbBans[n];                                                        // admin bans (exact normalized name)
   }
+  function setDbBans(obj){ dbBans = obj || {}; }
 
   function block(){
     if(document.getElementById('dg-ban')) return;
@@ -26,5 +29,5 @@
     else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(o); });
   }
 
-  window.DGBan = { isBanned: isBanned, block: block };
+  window.DGBan = { isBanned: isBanned, block: block, setDbBans: setDbBans };
 })();

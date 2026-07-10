@@ -92,6 +92,11 @@
       }
       lossInit=true;
     });
+    db.ref('bans').on('value',function(snap){                     // admin-managed ban list
+      if(window.DGBan) DGBan.setDbBans(snap.val()||{});
+      if(meData && window.DGBan && DGBan.isBanned(meData.name)){ DGBan.block(); return; }
+      renderLeaderboard();
+    }, function(){});                                             // ignore read errors (e.g. before the rules allow it)
   });
 
   // ---------- record a finished game (called by game.js) ----------
