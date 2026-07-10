@@ -67,6 +67,7 @@
     if(setupDone) return; setupDone=true;
     db.ref('users/'+uid).on('value',function(snap){
       meData=snap.val()||{};
+      if(window.DGBan && DGBan.isBanned(meData.name)){ DGBan.block(); return; }
       renderIdentity();
       if(!meData.name && modal && !modal.classList.contains('show')) promptUsername();
     });
@@ -120,10 +121,13 @@
     openModalHTML(
       '<h2>👋 Pick a username</h2><p class="modal-sub">It shows on the leaderboard and your profile.</p>'+
       '<input id="unameInput" class="field" maxlength="16" placeholder="e.g. Leo" autocomplete="off">'+
+      '<div id="unameErr" style="color:#e7727b;font-size:.82rem;margin:-8px 0 12px;min-height:1.1em"></div>'+
       '<button class="btn" id="unameSave">Let’s play</button>'
     );
     var inp=document.getElementById('unameInput'); if(inp){ inp.value=(meData&&meData.name)||''; inp.focus(); }
-    function save(){ var v=(inp.value||'').trim().slice(0,16); if(!v) return; db.ref('users/'+uid).update({ name:v, updated:firebase.database.ServerValue.TIMESTAMP }); closeModal(); }
+    function save(){ var v=(inp.value||'').trim().slice(0,16); if(!v) return;
+      if(window.DGBan && DGBan.isBanned(v)){ document.getElementById('unameErr').textContent='🚫 That username is banned.'; return; }
+      db.ref('users/'+uid).update({ name:v, updated:firebase.database.ServerValue.TIMESTAMP }); closeModal(); }
     document.getElementById('unameSave').addEventListener('click',save);
     if(inp) inp.addEventListener('keydown',function(e){ if(e.key==='Enter') save(); });
   }
@@ -133,6 +137,7 @@
   function lbRows(){
     var m=METRIC[MODE], rows=[];
     for(var id in usersCache){ var u=usersCache[id]; if(!u || !u.name) continue;
+      if(window.DGBan && DGBan.isBanned(u.name)) continue;
       rows.push({ id:id, name:u.name, avatar:u.avatar, val:m.get(u.stats && u.stats[m.key]) }); }
     rows.sort(function(a,b){ return (b.val-a.val) || a.name.localeCompare(b.name); });
     return rows;

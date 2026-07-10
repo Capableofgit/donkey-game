@@ -63,6 +63,7 @@
   function msg(t){ return '<div class="create-card"><p style="margin:0">'+esc(t)+'</p></div>'; }
 
   function route(){
+    if(window.DGBan && DGBan.isBanned(myName)){ DGBan.block(); return; }
     if(!myName){ showNameForm(); return; }
     if(!roomId){ showCreate(); return; }
     joinAndListen();
@@ -73,9 +74,11 @@
     app.innerHTML='<div class="create-card"><h2 style="margin:0 0 6px">👋 Pick a username</h2>'+
       '<p>It shows on the leaderboard and in lobbies.</p>'+
       '<input id="nm" class="field" maxlength="16" placeholder="e.g. Leo" autocomplete="off">'+
+      '<div id="nmErr" style="color:#e7727b;font-size:.82rem;margin:-6px 0 12px;min-height:1.1em"></div>'+
       '<button class="btn" id="nmSave">Continue</button></div>';
     var nm=document.getElementById('nm'); nm.focus();
     function save(){ var v=(nm.value||'').trim().slice(0,16); if(!v) return;
+      if(window.DGBan && DGBan.isBanned(v)){ document.getElementById('nmErr').textContent='🚫 That username is banned.'; return; }
       db.ref('users/'+uid).update({ name:v, updated:firebase.database.ServerValue.TIMESTAMP });
       myName=v; route(); }
     document.getElementById('nmSave').addEventListener('click',save);
