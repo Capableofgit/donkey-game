@@ -21,7 +21,7 @@
   try { firebase.initializeApp(CONFIG); auth = firebase.auth(); db = firebase.database(); }
   catch (e) { return; }
 
-  var uid = null, meData = null, usersCache = {}, setupDone = false;
+  var uid = null, meData = null, usersCache = {}, setupDone = false, lossSeen = {}, lossInit = false;
 
   // Which stat each mode's leaderboard ranks by.
   var METRIC = {
@@ -34,6 +34,14 @@
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
   function modeTitle(){ return MODE==='daily'?'Daily':MODE==='unlimited'?'Unlimited':'Tower'; }
+  function modeName(m){ return m==='unlimited'?'Unlimited':m==='tower'?'Tower':'Daily'; }
+  function showToast(text){
+    var wrap=document.getElementById('toast-wrap');
+    if(!wrap){ wrap=document.createElement('div'); wrap.id='toast-wrap'; document.body.appendChild(wrap); }
+    var t=document.createElement('div'); t.className='toast'; t.textContent=text; wrap.appendChild(t);
+    requestAnimationFrame(function(){ t.classList.add('show'); });
+    setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); },300); }, 4200);
+  }
   function avatarHTML(u,size,cls){
     var st='width:'+size+'px;height:'+size+'px;', c='av'+(cls?(' '+cls):'');
     if(u && u.avatar) return '<img class="'+c+'" style="'+st+'" src="'+u.avatar+'" alt="">';
@@ -75,6 +83,14 @@
       usersCache=snap.val()||{};
       renderLeaderboard();
       if(modal && modal.dataset.openUid) openProfile(modal.dataset.openUid);
+      for(var lid in usersCache){                                  // site-wide loss notifications
+        var lu=usersCache[lid], lat=lu && lu.lastLoss && lu.lastLoss.at;
+        if(lat && lossSeen[lid]!==lat){
+          if(lossInit && lid!==uid) showToast('💥 '+(lu.name||'Someone')+' lost the '+modeName(lu.lastLoss.mode)+'!');
+          lossSeen[lid]=lat;
+        }
+      }
+      lossInit=true;
     });
   });
 
@@ -82,15 +98,18 @@
   window.DGCloud = {
     recordResult: function(p){
       if(!uid || !db) return;
+      if(!p.won) db.ref('users/'+uid+'/lastLoss').set({ mode:p.mode, at:firebase.database.ServerValue.TIMESTAMP });
       var ref=db.ref('users/'+uid+'/stats/'+p.mode);
       if(p.mode==='daily'){
         ref.transaction(function(s){
           s=s||{games:0,wins:0,curStreak:0,maxStreak:0,lastDay:null,lastWonDay:null};
-          if(s.lastDay===p.day) return s;                 // only the first attempt of the day counts
-          s.games++;
-          if(p.won){ s.curStreak=(s.lastWonDay===p.day-1)?(s.curStreak+1):1; s.lastWonDay=p.day; s.wins++; if(s.curStreak>s.maxStreak) s.maxStreak=s.curStreak; }
-          else { s.curStreak=0; }
-          s.lastDay=p.day; return s;
+          if(s.lastDay!==p.day){ s.games++; s.lastDay=p.day; }    // count each distinct day once
+          if(p.won && s.lastWonDay!==p.day){                      // a day counts as won if you win it at all
+            s.curStreak=(s.lastWonDay===p.day-1)?(s.curStreak+1):1;   // consecutive-day check
+            s.lastWonDay=p.day; s.wins++;
+            if(s.curStreak>s.maxStreak) s.maxStreak=s.curStreak;
+          }
+          return s;                                               // losses/retries don't reset the streak
         });
       } else if(p.mode==='unlimited'){
         ref.transaction(function(s){

@@ -241,3 +241,8 @@ img.av{ object-fit:cover; }
 /* Tile front labels (Hebrew position names on 3x3 boards; plain numbers on bigger Tower grids) */
 .front .lbl{ display:inline-block; }
 .front .lbl.heb{ display:block; width:100%; box-sizing:border-box; font-size:.82rem; font-weight:700; line-height:1.14; padding:0 6px; text-align:center; }
+
+/* Site-wide loss notifications */
+#toast-wrap{ position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:9998; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; max-width:92vw; }
+.toast{ background:var(--card); border:1px solid var(--bomb-line); color:var(--ink); padding:10px 16px; border-radius:999px; font-size:.85rem; font-weight:700; box-shadow:var(--shadow); opacity:0; transform:translateY(-12px); transition:opacity .3s ease, transform .3s ease; max-width:92vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.toast.show{ opacity:1; transform:none; }
