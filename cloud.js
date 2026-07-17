@@ -103,7 +103,10 @@
   window.DGCloud = {
     recordResult: function(p){
       if(!uid || !db) return;
-      if(!p.won) db.ref('users/'+uid+'/lastLoss').set({ mode:p.mode, at:firebase.database.ServerValue.TIMESTAMP });
+      if(!p.won){
+        db.ref('users/'+uid+'/lastLoss').set({ mode:p.mode, at:firebase.database.ServerValue.TIMESTAMP });
+        showToast('💥 You lost the '+modeName(p.mode)+'!');   // the loser gets the notification too
+      }
       var ref=db.ref('users/'+uid+'/stats/'+p.mode);
       if(p.mode==='daily'){
         ref.transaction(function(s){
