@@ -25,7 +25,7 @@
 
   // Which stat each mode's leaderboard ranks by.
   var METRIC = {
-    daily:     { key:'daily',     label:'Max streak',  get:function(s){ return (s && s.maxStreak)  || 0; } },
+    daily:     { key:'daily',     label:'Wins',        get:function(s){ return (s && s.wins)       || 0; } },
     unlimited: { key:'unlimited', label:'Best streak', get:function(s){ return (s && s.bestStreak) || 0; } },
     tower:     { key:'tower',     label:'Best level',  get:function(s){ return (s && s.bestLevel)  || 0; } }
   };
