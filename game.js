@@ -162,10 +162,18 @@
 
   function recordCloud(p){ if(window.DGCloud && window.DGCloud.recordResult){ try{ window.DGCloud.recordResult(p); }catch(e){} } }
 
+  // ---------- screen juice ----------
+  function flash(kind){
+    var f=document.createElement('div'); f.className='flash '+kind; document.body.appendChild(f);
+    setTimeout(function(){ if(f.parentNode) f.parentNode.removeChild(f); }, kind==='gold'?1050:800);
+  }
+  function boom(){ if(grid){ grid.classList.add('boom'); setTimeout(function(){ grid.classList.remove('boom'); },620); } flash('red'); }
+  function glory(){ flash('gold'); }
+
   function singleOver(){
     recordCloud({ mode:MODE, won:(st.result==='win'), day:(MODE==='daily'?puzzleNumber():null) });
-    if(st.result==='win'){ panel('win','🎉 WINNER WINNER CHICKEN HOVAV!',"Congratulations, you're going to have a good week ahead of you.", extraForMode()); launchConfetti(); }
-    else panel('lose','💥 Upside-down donkey!','You lost. Get out.', extraForMode());
+    if(st.result==='win'){ panel('win','🎉 WINNER WINNER CHICKEN HOVAV!',"Congratulations, you're going to have a good week ahead of you.", extraForMode()); launchConfetti(); glory(); }
+    else { panel('lose','💥 Upside-down donkey!','You lost. Get out.', extraForMode()); boom(); }
     wireExtra();
   }
 
@@ -173,11 +181,12 @@
     if(st.result==='lose'){
       recordCloud({ mode:'tower', won:false, level:board.level, champion:false });
       panel('lose','💥 Upside-down donkey!','You reached level '+board.level+' of '+TOWER_MAX+'. Get out.','<button class="btn" id="towerBtn">↻ Try again</button>');
+      boom();
       document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=1; buildBoard(makeSpec()); });
     } else if(board.level>=TOWER_MAX){
       recordCloud({ mode:'tower', won:true, level:TOWER_MAX, champion:true });
       panel('win','🏆 TOWER CHAMPION!','You cleared all '+TOWER_MAX+' levels. Incredible.','<button class="btn" id="towerBtn">↻ Play again</button>');
-      launchConfetti();
+      launchConfetti(); glory();
       document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=1; buildBoard(makeSpec()); });
     } else {
       panel('win','✅ Level '+board.level+' cleared!','Next: level '+(board.level+1)+' — a '+(board.level+3)+'×'+(board.level+3)+' board with '+(board.level+1)+' bombs.','<button class="btn" id="towerBtn">Next level →</button>');
@@ -239,7 +248,7 @@
   function build(){
     document.body.innerHTML =
       '<nav class="tabs">'+tabLink('daily','DAILY','index.html')+tabLink('unlimited','UNLIMITED','unlimited.html')+tabLink('tower','TOWER','tower.html')+'</nav>'+
-      '<header><h1 class="title"><span class="emoji">🫏</span> Donkey Game</h1><div class="puzzle-no" id="subtitle"></div></header>'+
+      '<header><h1 class="title"><span class="emoji">🫏</span><span class="ttext">Donkey Game</span></h1><div class="puzzle-no" id="subtitle"></div></header>'+
       '<div class="utility" id="utility"><button class="mute" id="muteBtn" type="button" aria-label="Toggle sound"></button></div>'+
       '<div class="panel">'+
         '<div class="status" id="status"></div>'+

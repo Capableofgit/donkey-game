@@ -32,7 +32,7 @@
 
   function build(){
     document.body.innerHTML =
-      '<header><h1 class="title"><span class="emoji">🫏</span> Admin</h1><div class="puzzle-no">Donkey Game control panel</div></header>'+
+      '<header><h1 class="title"><span class="emoji">🫏</span><span class="ttext">Admin</span></h1><div class="puzzle-no">Donkey Game control panel</div></header>'+
       '<div id="app"></div>'+
       '<footer>Vibecoded by Leo</footer>';
     app=document.getElementById('app');
