@@ -340,6 +340,8 @@ img.av{ object-fit:cover; }
   opacity:0; transform:translateX(30px) scale(.9); transition:opacity .3s ease, transform .35s cubic-bezier(.2,1.4,.3,1);
 }
 .toast.show{ opacity:1; transform:none; animation:toastPulse 1.6s ease-in-out .35s infinite; }
+.toast.pick{ border-color:var(--safe-line); background:linear-gradient(160deg, rgba(18,40,26,.92), rgba(10,18,13,.92)); box-shadow:0 0 26px rgba(94,224,138,.35), var(--shadow); font-size:.98rem; padding:13px 20px; }
+.toast.pick.show{ animation:none; }
 @keyframes toastPulse{ 0%,100%{ box-shadow:0 0 40px rgba(255,92,108,.5), var(--shadow);} 50%{ box-shadow:0 0 60px rgba(255,92,108,.75), var(--shadow);} }
 @media (max-width:640px){
   #toast-wrap{ right:auto; left:50%; transform:translate(-50%,-50%); align-items:center; max-width:88vw; }

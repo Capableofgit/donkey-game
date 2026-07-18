@@ -110,7 +110,7 @@
     if(st.over || st.revealed[i]) return;
     st.revealed[i]=true;
     if(board.bombs[i]){ st.over=true; st.result='lose'; st.hitBomb=i; AudioFX.fail(); }
-    else { st.found++; AudioFX.reveal(st.found, board.safeTotal);
+    else { st.found++; AudioFX.reveal(st.found, board.safeTotal); pickCloud();
       if(st.found>=board.safeTotal){ st.over=true; st.result='win'; } }
     render();
     if(st.over) boardOver();
@@ -161,6 +161,7 @@
   }
 
   function recordCloud(p){ if(window.DGCloud && window.DGCloud.recordResult){ try{ window.DGCloud.recordResult(p); }catch(e){} } }
+  function pickCloud(){ if(window.DGCloud && window.DGCloud.pick){ try{ window.DGCloud.pick(MODE); }catch(e){} } }
 
   // ---------- screen juice ----------
   function flash(kind){

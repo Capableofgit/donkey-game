@@ -21,7 +21,7 @@
   try { firebase.initializeApp(CONFIG); auth = firebase.auth(); db = firebase.database(); }
   catch (e) { return; }
 
-  var uid = null, meData = null, usersCache = {}, setupDone = false, lossSeen = {}, lossInit = false;
+  var uid = null, meData = null, usersCache = {}, setupDone = false, lossSeen = {}, pickSeen = {}, lossInit = false;
 
   // Which stat each mode's leaderboard ranks by.
   var METRIC = {
@@ -35,10 +35,10 @@
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
   function modeTitle(){ return MODE==='daily'?'Daily':MODE==='unlimited'?'Unlimited':'Tower'; }
   function modeName(m){ return m==='unlimited'?'Unlimited':m==='tower'?'Tower':'Daily'; }
-  function showToast(text){
+  function showToast(text,kind){
     var wrap=document.getElementById('toast-wrap');
     if(!wrap){ wrap=document.createElement('div'); wrap.id='toast-wrap'; document.body.appendChild(wrap); }
-    var t=document.createElement('div'); t.className='toast'; t.textContent=text; wrap.appendChild(t);
+    var t=document.createElement('div'); t.className='toast'+(kind?(' '+kind):''); t.textContent=text; wrap.appendChild(t);
     requestAnimationFrame(function(){ t.classList.add('show'); });
     setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); },300); }, 4200);
   }
@@ -83,11 +83,17 @@
       usersCache=snap.val()||{};
       renderLeaderboard();
       if(modal && modal.dataset.openUid) openProfile(modal.dataset.openUid);
-      for(var lid in usersCache){                                  // site-wide loss notifications
-        var lu=usersCache[lid], lat=lu && lu.lastLoss && lu.lastLoss.at;
+      for(var lid in usersCache){                                  // site-wide loss + pick notifications
+        var lu=usersCache[lid];
+        var lat=lu && lu.lastLoss && lu.lastLoss.at;
         if(lat && lossSeen[lid]!==lat){
           if(lossInit && lid!==uid) showToast('💥 '+(lu.name||'Someone')+' lost the '+modeName(lu.lastLoss.mode)+'!');
           lossSeen[lid]=lat;
+        }
+        var pat=lu && lu.lastPick && lu.lastPick.at;
+        if(pat && pickSeen[lid]!==pat){
+          if(lossInit && lid!==uid) showToast('👆 '+(lu.name||'Someone')+' picked a square!', 'pick');
+          pickSeen[lid]=pat;
         }
       }
       lossInit=true;
@@ -136,6 +142,10 @@
         });
       }
       db.ref('users/'+uid+'/updated').set(firebase.database.ServerValue.TIMESTAMP);
+    },
+    pick: function(mode){                                       // broadcast a safe reveal (never which square)
+      if(!uid || !db) return;
+      db.ref('users/'+uid+'/lastPick').set({ mode:mode, at:firebase.database.ServerValue.TIMESTAMP });
     }
   };
 
