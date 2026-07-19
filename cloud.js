@@ -21,7 +21,7 @@
   try { firebase.initializeApp(CONFIG); auth = firebase.auth(); db = firebase.database(); }
   catch (e) { return; }
 
-  var uid = null, meData = null, usersCache = {}, setupDone = false, lossSeen = {}, pickSeen = {}, lossInit = false;
+  var uid = null, meData = null, usersCache = {}, setupDone = false, lossSeen = {}, pickSeen = {}, lossInit = false, maxPlayers = 0;
 
   // Which stat each mode's leaderboard ranks by.
   var METRIC = {
@@ -98,7 +98,13 @@
       if(meData && window.DGBan && DGBan.isBanned(meData.name)){ DGBan.block(); return; }
       renderLeaderboard();
     }, function(){});                                             // ignore read errors (e.g. before the rules allow it)
+    db.ref('config/maxPlayers').on('value',function(snap){        // admin-set cap on total players (0 = unlimited)
+      maxPlayers = snap.val() || 0;
+    }, function(){});
   });
+
+  // How many players currently hold a username (what the cap counts).
+  function namedCount(){ var n=0; for(var k in usersCache){ if(usersCache[k] && usersCache[k].name) n++; } return n; }
 
   // ---------- record a finished game (called by game.js) ----------
   window.DGCloud = {
@@ -155,6 +161,10 @@
     var inp=document.getElementById('unameInput'); if(inp){ inp.value=(meData&&meData.name)||''; inp.focus(); }
     function save(){ var v=(inp.value||'').trim().slice(0,16); if(!v) return;
       if(window.DGBan && DGBan.isBanned(v)){ document.getElementById('unameErr').textContent='🚫 That username is banned.'; return; }
+      var iHaveName = !!(meData && meData.name);                                   // existing players may always rename
+      if(!iHaveName && maxPlayers>0 && namedCount()>=maxPlayers){
+        document.getElementById('unameErr').textContent='🔒 Donkey Game is full ('+maxPlayers+' players). Ask the admin for a spot.'; return;
+      }
       db.ref('users/'+uid).update({ name:v, updated:firebase.database.ServerValue.TIMESTAMP }); closeModal(); }
     document.getElementById('unameSave').addEventListener('click',save);
     if(inp) inp.addEventListener('keydown',function(e){ if(e.key==='Enter') save(); });

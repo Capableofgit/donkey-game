@@ -28,7 +28,7 @@
   try{ if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(CONFIG); }catch(e){}
   var auth=firebase.auth(), db=firebase.database();
 
-  var app, users={}, bans={}, started=false;
+  var app, users={}, bans={}, config={}, started=false;
 
   function build(){
     document.body.innerHTML =
@@ -64,8 +64,9 @@
     if(started) return; started=true;
     db.ref('users').on('value',function(s){ users=s.val()||{}; render(); });
     db.ref('bans').on('value',function(s){ bans=s.val()||{}; render(); });
+    db.ref('config').on('value',function(s){ config=s.val()||{}; render(); });
   }
-  function stopPanel(){ if(started){ db.ref('users').off(); db.ref('bans').off(); started=false; } }
+  function stopPanel(){ if(started){ db.ref('users').off(); db.ref('bans').off(); db.ref('config').off(); started=false; } }
 
   function render(){
     if(!app) return;
@@ -91,8 +92,23 @@
         '<div class="adm-act"><button class="btn sm" data-unban="'+esc(k)+'">Unban</button></div></div>';
     }).join('');
 
+    var named=ids.filter(function(id){ return users[id] && users[id].name; }).length;
+    var cap=parseInt(config.maxPlayers,10)||0;
+    var capCard=
+      '<div class="adm-cap">'+
+        '<div class="adm-cap-top"><span class="adm-cap-label">👥 Player limit</span>'+
+          '<span class="adm-cap-count">'+named+' / <b id="capOut">'+(cap>0?cap:'∞')+'</b></span></div>'+
+        '<input type="range" id="capRange" class="adm-slider" min="0" max="20" step="1" value="'+cap+'">'+
+        '<div class="adm-cap-row">'+
+          '<span class="adm-cap-hint">0 = unlimited · new players are turned away at the cap</span>'+
+          '<input type="number" id="capNum" class="adm-capnum" min="0" max="999" value="'+cap+'">'+
+          '<button class="btn sm" id="capSave">Save</button>'+
+        '</div>'+
+      '</div>';
+
     app.innerHTML=
       '<div class="adm-bar"><span class="adm-you">Signed in as admin</span><button class="btn sm" id="signout">Sign out</button></div>'+
+      capCard+
       '<h3 class="adm-h">Players ('+ids.length+')</h3>'+
       (rows || '<p class="adm-empty">No players yet.</p>')+
       '<h3 class="adm-h">Banned names ('+banKeys.length+')</h3>'+
@@ -102,6 +118,16 @@
 
   function wire(){
     document.getElementById('signout').addEventListener('click',function(){ auth.signOut(); });
+    var capRange=document.getElementById('capRange'), capNum=document.getElementById('capNum'), capOut=document.getElementById('capOut');
+    function capSync(v){ v=Math.max(0,Math.min(999,parseInt(v,10)||0)); capRange.value=Math.min(20,v); capNum.value=v; capOut.textContent=v>0?v:'∞'; }
+    if(capRange) capRange.addEventListener('input',function(){ capSync(capRange.value); });
+    if(capNum) capNum.addEventListener('input',function(){ capSync(capNum.value); });
+    var capSave=document.getElementById('capSave');
+    if(capSave) capSave.addEventListener('click',function(){
+      var v=Math.max(0,Math.min(999,parseInt(capNum.value,10)||0));
+      db.ref('config/maxPlayers').set(v);
+      capSave.textContent='Saved ✓'; setTimeout(function(){ if(capSave) capSave.textContent='Save'; },1400);
+    });
     each('[data-ban]', function(b){ var id=b.getAttribute('data-ban'), u=users[id]||{};
       if(!u.name){ alert('This player has no username to ban.'); return; }
       if(confirm('Ban "'+u.name+'"? They won’t be able to play under that name.'))
