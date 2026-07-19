@@ -75,7 +75,7 @@
       var st=u.stats||{}, d=st.daily||{}, un=st.unlimited||{}, tw=st.tower||{};
       return '<div class="adm-row'+(banned?' banned':'')+'">'+ avatarHTML(u,34) +
         '<div class="adm-info"><div class="adm-name">'+esc(u.name||'(no name)')+(banned?' <span class="adm-tag">BANNED</span>':'')+'</div>'+
-        '<div class="adm-sub">Daily '+(d.maxStreak||0)+' · Unl '+(un.bestStreak||0)+' · Tower '+(tw.bestLevel||0)+'/5 · '+esc(id.slice(0,6))+'…</div></div>'+
+        '<div class="adm-sub">Daily '+(d.wins||0)+'W · Unl '+(un.bestStreak||0)+' · '+esc(id.slice(0,6))+'…</div></div>'+
         '<div class="adm-act">'+
           (banned ? '<button class="btn sm" data-unban="'+esc(norm(u.name))+'">Unban</button>'
                   : '<button class="btn sm danger" data-ban="'+esc(id)+'">Ban</button>')+

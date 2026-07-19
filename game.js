@@ -71,20 +71,18 @@
 
   // ---------- module state / DOM refs ----------
   var grid, statusEl, oddsEl, resultEl, resultTitle, resultText, resultExtra, subtitleEl;
-  var tiles=[], board=null, st=null, towerLevel=1, dailyPuzzleAtLoad=0;
+  var tiles=[], board=null, st=null, dailyPuzzleAtLoad=0;
+  var dailySize=({3:3,4:4,5:5})[lsGet('donkey:dailysize',3)]||3;   // daily board size: 3, 4, or 5
 
   // ---------- board spec for the current mode/level ----------
   function makeSpec(){
     if(MODE==='daily'){
-      var p=puzzleNumber();
-      return { n:9, cols:3, safeTotal:8, bombs:oneBomb(mulberry32(xmur3('donkey-game::v1::'+p)()),9) };
+      var p=puzzleNumber(), sz=dailySize;
+      if(sz===3) return { n:9, cols:3, safeTotal:8, bombs:oneBomb(mulberry32(xmur3('donkey-game::v1::'+p)()),9) };  // classic 3x3, unchanged
+      var cols=sz, n=cols*cols, b=sz-2;                                    // 4x4 -> 2 bombs, 5x5 -> 3 bombs
+      return { n:n, cols:cols, safeTotal:n-b, bombs:pickBombs(n,b,mulberry32(xmur3('donkey-daily::v1::'+p+'::s'+sz)())) };
     }
-    if(MODE==='unlimited'){
-      return { n:9, cols:3, safeTotal:8, bombs:oneBomb(Math.random,9) };
-    }
-    // tower — random board each load (reshuffles on every refresh, like Unlimited)
-    var L=towerLevel, cols=L+2, n=cols*cols;
-    return { n:n, cols:cols, level:L, safeTotal:n-L, bombs:pickBombs(n,L,Math.random) };
+    return { n:9, cols:3, safeTotal:8, bombs:oneBomb(Math.random,9) };     // unlimited
   }
 
   var HEBREW = ['שמאלה למעלה','למעלה באמצע','ימינה למעלה','שמאלה באמצע','באמצע באמצע','ימינה באמצע','שמאלה למטה','למטה באמצע','הטמל הנימי'];
@@ -156,8 +154,7 @@
   function boardOver(){
     for(var i=0;i<board.n;i++){ if(board.bombs[i]) st.revealed[i]=true; }   // reveal all bombs for clarity
     render();
-    if(MODE==='tower') towerOver();
-    else singleOver();
+    singleOver();
   }
 
   function recordCloud(p){ if(window.DGCloud && window.DGCloud.recordResult){ try{ window.DGCloud.recordResult(p); }catch(e){} } }
@@ -176,23 +173,6 @@
     if(st.result==='win'){ panel('win','🎉 WINNER WINNER CHICKEN HOVAV!',"Congratulations, you're going to have a good week ahead of you.", extraForMode()); launchConfetti(); glory(); }
     else { panel('lose','💥 Upside-down donkey!','You lost. Get out.', extraForMode()); boom(); }
     wireExtra();
-  }
-
-  function towerOver(){
-    if(st.result==='lose'){
-      recordCloud({ mode:'tower', won:false, level:board.level, champion:false });
-      panel('lose','💥 Upside-down donkey!','You reached level '+board.level+' of '+TOWER_MAX+'. Get out.','<button class="btn" id="towerBtn">↻ Try again</button>');
-      boom();
-      document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=1; buildBoard(makeSpec()); });
-    } else if(board.level>=TOWER_MAX){
-      recordCloud({ mode:'tower', won:true, level:TOWER_MAX, champion:true });
-      panel('win','🏆 TOWER CHAMPION!','You cleared all '+TOWER_MAX+' levels. Incredible.','<button class="btn" id="towerBtn">↻ Play again</button>');
-      launchConfetti(); glory();
-      document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=1; buildBoard(makeSpec()); });
-    } else {
-      panel('win','✅ Level '+board.level+' cleared!','Next: level '+(board.level+1)+' — a '+(board.level+3)+'×'+(board.level+3)+' board with '+(board.level+1)+' bombs.','<button class="btn" id="towerBtn">Next level →</button>');
-      document.getElementById('towerBtn').addEventListener('click',function(){ towerLevel=board.level+1; buildBoard(makeSpec()); });
-    }
   }
 
   function panel(cls,title,text,extraHTML){
@@ -246,11 +226,20 @@
   // ---------- UI scaffold ----------
   function tabLink(mode,label,href){ return '<a class="tab'+(MODE===mode?' active':'')+'" href="'+href+'">'+label+'</a>'; }
 
+  function buildSizes(){                                            // daily 3x3 / 4x4 / 5x5 selector
+    var el=document.getElementById('sizes'); if(!el) return;
+    el.innerHTML=[3,4,5].map(function(s){ return '<button class="szbtn'+(s===dailySize?' active':'')+'" type="button" data-sz="'+s+'">'+s+'×'+s+'</button>'; }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.szbtn'),function(b){
+      b.addEventListener('click',function(){ var s=parseInt(b.dataset.sz,10); if(s===dailySize) return; dailySize=s; lsSet('donkey:dailysize',s); buildSizes(); buildBoard(makeSpec()); });
+    });
+  }
+
   function build(){
     document.body.innerHTML =
-      '<nav class="tabs">'+tabLink('daily','DAILY','index.html')+tabLink('unlimited','UNLIMITED','unlimited.html')+tabLink('tower','TOWER','tower.html')+'</nav>'+
+      '<nav class="tabs">'+tabLink('daily','DAILY','index.html')+tabLink('unlimited','UNLIMITED','unlimited.html')+'</nav>'+
       '<header><h1 class="title"><span class="emoji">🫏</span><span class="ttext">Donkey Game</span></h1><div class="puzzle-no" id="subtitle"></div></header>'+
       '<div class="utility" id="utility"><button class="mute" id="muteBtn" type="button" aria-label="Toggle sound"></button></div>'+
+      '<div class="sizes" id="sizes"></div>'+
       '<div class="panel">'+
         '<div class="status" id="status"></div>'+
         '<div class="grid" id="grid"></div>'+
@@ -263,14 +252,12 @@
     resultEl=document.getElementById('result'); resultTitle=document.getElementById('resultTitle'); resultText=document.getElementById('resultText');
     resultExtra=document.getElementById('resultExtra'); subtitleEl=document.getElementById('subtitle');
 
-    if(MODE==='daily'){ dailyPuzzleAtLoad=puzzleNumber(); subtitleEl.textContent='No. '+dailyPuzzleAtLoad+' · a new board every day'; setInterval(dailyTick,1000); dailyTick(); }
-    else if(MODE==='unlimited'){ subtitleEl.textContent='Unlimited · new board every refresh'; }
-    else { subtitleEl.textContent='Tower · climb as high as you can'; }
+    if(MODE==='daily'){ dailyPuzzleAtLoad=puzzleNumber(); subtitleEl.textContent='No. '+dailyPuzzleAtLoad+' · a new board every day'; setInterval(dailyTick,1000); dailyTick(); buildSizes(); }
+    else { subtitleEl.textContent='Unlimited · new board every refresh'; }
 
     updateMuteBtn();
     document.getElementById('muteBtn').addEventListener('click',function(){ muted=!muted; lsSet('donkey:muted',muted); updateMuteBtn(); });
 
-    towerLevel=1;
     buildBoard(makeSpec());
   }
   function updateMuteBtn(){ var b=document.getElementById('muteBtn'); b.textContent=muted?'🔇':'🔊'; b.classList.toggle('off',muted); }

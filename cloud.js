@@ -83,13 +83,8 @@
       usersCache=snap.val()||{};
       renderLeaderboard();
       if(modal && modal.dataset.openUid) openProfile(modal.dataset.openUid);
-      for(var lid in usersCache){                                  // site-wide loss + pick notifications
+      for(var lid in usersCache){                                  // site-wide "picked a square" notifications
         var lu=usersCache[lid];
-        var lat=lu && lu.lastLoss && lu.lastLoss.at;
-        if(lat && lossSeen[lid]!==lat){
-          if(lossInit && lid!==uid) showToast('💥 '+(lu.name||'Someone')+' lost the '+modeName(lu.lastLoss.mode)+'!');
-          lossSeen[lid]=lat;
-        }
         var pat=lu && lu.lastPick && lu.lastPick.at;
         if(pat && pickSeen[lid]!==pat){
           if(lossInit && lid!==uid) showToast('👆 '+(lu.name||'Someone')+' picked a square!', 'pick');
@@ -109,10 +104,6 @@
   window.DGCloud = {
     recordResult: function(p){
       if(!uid || !db) return;
-      if(!p.won){
-        db.ref('users/'+uid+'/lastLoss').set({ mode:p.mode, at:firebase.database.ServerValue.TIMESTAMP });
-        showToast('💥 You lost the '+modeName(p.mode)+'!');   // the loser gets the notification too
-      }
       var ref=db.ref('users/'+uid+'/stats/'+p.mode);
       if(p.mode==='daily'){
         ref.transaction(function(s){
@@ -216,7 +207,6 @@
       '<div class="prof-stats">'+
         statBlock('Daily',[['Max streak',d.maxStreak||0],['Current streak',d.curStreak||0],['Wins',d.wins||0],['Played',d.games||0]])+
         statBlock('Unlimited',[['Best streak',un.bestStreak||0],['Clears',un.clears||0],['Played',un.games||0]])+
-        statBlock('Tower',[['Best level',(tw.bestLevel||0)+' / 5'],['Champion runs',tw.champions||0],['Played',tw.games||0]])+
       '</div>';
     openModalHTML(html);
     modal.dataset.openUid=id;
