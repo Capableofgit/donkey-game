@@ -16,12 +16,17 @@
 
   var MODE = (window.DG_MODE === 'unlimited' || window.DG_MODE === 'tower') ? window.DG_MODE : 'daily';
 
-  if (typeof firebase === 'undefined') { return; }                  // SDK didn't load — skip cloud, game still runs
-  var auth, db;
-  try { firebase.initializeApp(CONFIG); auth = firebase.auth(); db = firebase.database(); }
-  catch (e) { return; }
+  // The game is account-gated: you can't play until you've claimed a username.
+  // That means Firebase is required — if it's missing, we show a blocking "can't connect" gate.
+  var FB_OK = (typeof firebase !== 'undefined');
+  var auth = null, db = null;
+  if (FB_OK) {
+    try { firebase.initializeApp(CONFIG); auth = firebase.auth(); db = firebase.database(); }
+    catch (e) { FB_OK = false; }
+  }
 
   var uid = null, meData = null, usersCache = {}, setupDone = false, lossSeen = {}, pickSeen = {}, lossInit = false, maxPlayers = 0;
+  var meLoaded = false, gated = true, gateEl = null, gateState = '';
 
   // Which stat each mode's leaderboard ranks by.
   var METRIC = {
@@ -49,9 +54,57 @@
     return '<span class="'+c+'" style="'+st+'font-size:'+Math.round(size*0.5)+'px;">'+esc(initial)+'</span>';
   }
 
+  // ---------- account gate (game is unplayable until a username exists) ----------
+  function ensureGate(){ if(gateEl) return gateEl; gateEl=document.createElement('div'); gateEl.className='gate'; gateEl.id='dg-gate'; document.body.appendChild(gateEl); return gateEl; }
+  function lockPlay(on){ var p=document.querySelector('.panel'); if(p){ if(on) p.setAttribute('inert',''); else p.removeAttribute('inert'); } }
+  function isFull(){ return maxPlayers>0 && namedCount()>=maxPlayers; }
+  function renderGateBody(state){
+    var g=ensureGate();
+    if(state==='offline'){
+      g.innerHTML='<div class="gate-card"><div class="gate-emoji">📡</div><h2 class="gate-h">Can’t connect</h2>'+
+        '<p class="gate-sub">Donkey Game needs an internet connection so you can sign in and play. Check your connection and refresh.</p></div>';
+      return;
+    }
+    if(state==='connecting'){
+      g.innerHTML='<div class="gate-card"><div class="gate-emoji">🫏</div><h2 class="gate-h">Loading…</h2><p class="gate-sub">Connecting you to Donkey Game.</p></div>';
+      return;
+    }
+    if(state==='full'){
+      g.innerHTML='<div class="gate-card"><div class="gate-emoji">🔒</div><h2 class="gate-h">Donkey Game is full</h2>'+
+        '<p class="gate-sub">All '+maxPlayers+' player slots are taken. Ask the admin to raise the limit or free up a spot, then refresh.</p></div>';
+      return;
+    }
+    g.innerHTML='<div class="gate-card"><div class="gate-emoji">🫏</div>'+
+      '<h2 class="gate-h">Create your player</h2>'+
+      '<p class="gate-sub">Pick a username to start playing — that’s your account. You can’t play until you do.</p>'+
+      '<input id="gateInput" class="field" maxlength="16" placeholder="e.g. Leo" autocomplete="off">'+
+      '<div id="gateErr" class="gate-err"></div>'+
+      '<button class="btn" id="gateSave" type="button">Enter the game</button></div>';
+    var inp=g.querySelector('#gateInput'), btn=g.querySelector('#gateSave');
+    if(inp){ inp.value=''; inp.addEventListener('keydown',function(e){ if(e.key==='Enter') gateSave(); }); setTimeout(function(){ inp.focus(); },40); }
+    if(btn) btn.addEventListener('click',gateSave);
+  }
+  function gateSave(){
+    var inp=document.getElementById('gateInput'), err=document.getElementById('gateErr'); if(!inp) return;
+    var v=(inp.value||'').trim().slice(0,16); if(!v) return;
+    if(window.DGBan && DGBan.isBanned(v)){ if(err) err.textContent='🚫 That username is banned.'; return; }
+    if(isFull()){ if(err) err.textContent='🔒 Donkey Game is full ('+maxPlayers+' players). Ask the admin for a spot.'; return; }
+    if(!uid || !db){ if(err) err.textContent='Still connecting… try again in a second.'; return; }
+    db.ref('users/'+uid).update({ name:v, updated:firebase.database.ServerValue.TIMESTAMP });   // meData listener lifts the gate
+  }
+  function applyGate(){
+    ensureGate();
+    if(!gated){ gateEl.classList.remove('show'); lockPlay(false); gateState=''; return; }
+    var state = !FB_OK ? 'offline' : (!uid || !meLoaded) ? 'connecting' : (isFull() ? 'full' : 'create');
+    if(state!==gateState){ gateState=state; renderGateBody(state); }     // avoid clobbering the input on unrelated updates
+    gateEl.classList.add('show'); lockPlay(true);
+  }
+
   // ---------- UI elements (injected after the game builds its DOM) ----------
   var idChip, lbEl, modal;
   ready(function(){
+    applyGate();                                                        // block play immediately, before auth resolves
+    if(!FB_OK) return;                                                  // no SDK: stay on the "can't connect" gate
     var util=document.getElementById('utility');
     idChip=document.createElement('button'); idChip.className='idchip'; idChip.type='button'; idChip.innerHTML='<span>…</span>';
     idChip.addEventListener('click',function(){ if(uid) openProfile(uid); });
@@ -69,19 +122,22 @@
   });
 
   // ---------- auth (reuse the persisted anonymous user; only sign in if none) ----------
-  auth.onAuthStateChanged(function(user){
+  if(FB_OK) auth.onAuthStateChanged(function(user){
     if(!user){ auth.signInAnonymously().catch(function(){}); return; }
     uid=user.uid;
+    applyGate();
     if(setupDone) return; setupDone=true;
     db.ref('users/'+uid).on('value',function(snap){
-      meData=snap.val()||{};
+      meData=snap.val()||{}; meLoaded=true;
       if(window.DGBan && DGBan.isBanned(meData.name)){ DGBan.block(); return; }
       renderIdentity();
-      if(!meData.name && modal && !modal.classList.contains('show')) promptUsername();
+      gated = !(meData && meData.name);                            // no username => game stays locked
+      applyGate();
     });
     db.ref('users').on('value',function(snap){
       usersCache=snap.val()||{};
       renderLeaderboard();
+      applyGate();                                                // refresh full/create state as players come and go
       if(modal && modal.dataset.openUid) openProfile(modal.dataset.openUid);
       for(var lid in usersCache){                                  // site-wide "picked a square" notifications
         var lu=usersCache[lid];
@@ -100,6 +156,7 @@
     }, function(){});                                             // ignore read errors (e.g. before the rules allow it)
     db.ref('config/maxPlayers').on('value',function(snap){        // admin-set cap on total players (0 = unlimited)
       maxPlayers = snap.val() || 0;
+      applyGate();
     }, function(){});
   });
 
