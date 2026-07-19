@@ -195,7 +195,7 @@
     var ctx=canvas.getContext('2d'), dpr=Math.min(window.devicePixelRatio||1,2), W,H;
     function resize(){ W=canvas.width=Math.floor(innerWidth*dpr); H=canvas.height=Math.floor(innerHeight*dpr); }
     resize(); window.addEventListener('resize',resize);
-    var colors=['#6aaa64','#e0606a','#6aa0e0','#f2c14e','#f29ec4','#9b7ede','#ffffff'], pieces=[];
+    var colors=['#ff2bd6','#00f0ff','#ffe600','#39ff88','#8b5cff','#ff8a2b','#ffffff'], pieces=[];
     function rand(a,b){ return a+Math.random()*(b-a); }
     function addPiece(){ pieces.push({ x:rand(0,W), y:rand(-H*0.25,H), w:rand(6,12)*dpr, h:rand(8,16)*dpr,
       color:colors[(Math.random()*colors.length)|0], vy:rand(2,5)*dpr, vx:rand(-1,1)*dpr,
